@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Laporan · Progres Harian{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<h1>Laporan & Analitik</h1>
+<p>Periode: {{ month_start }} s.d. {{ today }}</p>
+
+<div class="grid">
+	<div class="card">
+		<h2>Ringkasan Keuangan</h2>
+		<p>Pemasukan: <strong>Rp {{ income_total }}</strong> | Pengeluaran: <strong>Rp {{ expense_total }}</strong></p>
+		<canvas id="pieCat" height="160"></canvas>
+	</div>
+	<div class="card">
+		<h2>Income vs Expense</h2>
+		<canvas id="barIE" height="160"></canvas>
+	</div>
+</div>
+
+<div class="card">
+	<h2>Ringkasan Aktivitas</h2>
+	<p>Belajar: {{ learning_minutes }} menit bulan ini.</p>
+	<p>Olahraga: {{ health_count }} kali bulan ini.</p>
+</div>
+
+<p><a class="btn link" href="/">← Kembali ke Dashboard</a></p>
+{% endblock %}
+{% block body_extra %}
+<script>
+const cat = {{ by_category|safe }};
+new Chart(document.getElementById('pieCat'), {
+	type: 'pie',
+	data: {
+		labels: cat.map(x => x.category || 'Lainnya'),
+		datasets: [{ data: cat.map(x => x.total), backgroundColor: ['#ef5350','#42a5f5','#66bb6a','#ffa726','#ab47bc','#26a69a','#8d6e63'] }]
+	}
+});
+new Chart(document.getElementById('barIE'), {
+	type: 'bar',
+	data: { labels: ['Pemasukan','Pengeluaran'], datasets: [{ data: [{{ income_total }}, {{ expense_total }}], backgroundColor: ['#42a5f5','#ef5350'] }] },
+	options: { indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+});
+</script>
+{% endblock %} 

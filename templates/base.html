@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{% block title %}Progres Harian{% endblock %}</title>
+	<link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-css-reset/dist/reset.min.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/inter.css">
+	<link rel="stylesheet" href="{% static 'css/app.css' %}">
+	{% block head_extra %}{% endblock %}
+</head>
+<body>
+	<header class="navbar">
+		<div class="container">
+			<a class="brand" href="/">Progres Harian</a>
+			<nav>
+				<a href="/">Dashboard</a>
+				<a href="/reports">Laporan</a>
+				<a href="/admin/" target="_blank">Admin</a>
+				<button id="themeToggle" class="btn theme-toggle" type="button">Tema</button>
+			</nav>
+		</div>
+	</header>
+	<main class="container">
+		{% block content %}{% endblock %}
+	</main>
+	<footer class="footer container small">
+		<p>© {{ now|default:2025 }} Progres Harian</p>
+	</footer>
+	<script>
+	(function(){
+		const key = 'ph-theme';
+		const saved = localStorage.getItem(key);
+		if (saved === 'light') document.body.setAttribute('data-theme','light');
+		const btn = document.getElementById('themeToggle');
+		btn && btn.addEventListener('click', function(){
+			const isLight = document.body.getAttribute('data-theme') === 'light';
+			if (isLight){ document.body.removeAttribute('data-theme'); localStorage.setItem(key,'dark'); }
+			else { document.body.setAttribute('data-theme','light'); localStorage.setItem(key,'light'); }
+		});
+	})();
+	</script>
+	{% block body_extra %}{% endblock %}
+</body>
+</html> 

@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · Progres Harian{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<h1>Dashboard ({{ today }})</h1>
+<p class="muted">"{{ quote }}"</p>
+
+<div class="grid">
+	<div class="card">
+		<h2>Fokus Hari Ini</h2>
+		<form method="post" action="{% url 'tracker:task-suggest-ai' %}" class="inline">
+			{% csrf_token %}
+			<button class="btn secondary" type="submit">Generate Saran AI</button>
+		</form>
+		<ul class="list">
+			<li>Akademik: {% if focus.academic %}{{ focus.academic.title }}{% else %}<em>Belum ditentukan</em>{% endif %}</li>
+			<li>Kesehatan: {% if focus.health %}{{ focus.health.title }}{% else %}<em>Belum ditentukan</em>{% endif %}</li>
+			<li>Harian: {% if focus.daily %}{{ focus.daily.title }}{% else %}<em>Belum ditentukan</em>{% endif %}</li>
+		</ul>
+	</div>
+
+	<div class="card">
+		<h2>Saldo</h2>
+		<p><strong>{{ account.name }}</strong></p>
+		<p class="big">Rp {{ current_balance }}</p>
+	</div>
+
+	<div class="card">
+		<h2>Water Tracker</h2>
+		<p>Hari ini: {{ water_today.glasses }} / {{ prefs.daily_water_goal_glasses }} gelas</p>
+		<form method="post" action="{% url 'tracker:water-add' %}">
+			{% csrf_token %}
+			<button class="btn" type="submit">+1 Gelas</button>
+		</form>
+	</div>
+</div>
+
+<div class="card">
+	<h2>Tugas Hari Ini</h2>
+	<form class="row" method="post" action="{% url 'tracker:task-add' %}">
+		{% csrf_token %}
+		<input type="date" name="date" value="{{ today }}" required>
+		<select name="category" required>
+			{% for val,label in categories %}
+			<option value="{{ val }}">{{ label }}</option>
+			{% endfor %}
+		</select>
+		<input type="text" name="title" placeholder="Judul tugas" required>
+		<input type="text" name="description" placeholder="Deskripsi (opsional)">
+		<button class="btn primary" type="submit">Tambah</button>
+	</form>
+	<ul class="list">
+		{% for t in tasks %}
+		<li>
+			<form method="post" action="{% url 'tracker:task-toggle' t.id %}" class="inline">
+				{% csrf_token %}
+				<button class="icon" type="submit">{% if t.is_completed %}✔{% else %}○{% endif %}</button>
+			</form>
+			<span class="badge {% if t.category == 'ACADEMIC' %}academic{% elif t.category == 'HEALTH' %}health{% else %}daily{% endif %}">[{{ t.get_category_display }}]</span>
+			{{ t.title }} {% if t.description %}- {{ t.description }}{% endif %}
+		</li>
+		{% empty %}
+		<li>Belum ada tugas hari ini.</li>
+		{% endfor %}
+	</ul>
+</div>
+
+<div class="grid">
+	<div class="card">
+		<h2>Catat Transaksi</h2>
+		<form class="column" method="post" action="{% url 'tracker:transaction-add' %}">
+			{% csrf_token %}
+			<div class="row">
+				<input type="date" name="date" value="{{ today }}" required>
+				<select name="type" required>
+					<option value="INCOME">Pemasukan</option>
+					<option value="EXPENSE">Pengeluaran</option>
+				</select>
+			</div>
+			<div class="row">
+				<input type="number" step="0.01" name="amount" placeholder="Nominal" required>
+				<input type="text" name="category" placeholder="Kategori (opsional)">
+			</div>
+			<input type="text" name="note" placeholder="Catatan (opsional)">
+			<button class="btn primary" type="submit">Simpan</button>
+		</form>
+		<h3>Transaksi Terakhir</h3>
+		<ul class="list small">
+			{% for tr in recent_transactions %}
+			<li>
+				{{ tr.date }} - {{ tr.type }} - Rp {{ tr.amount }} {% if tr.category %}({{ tr.category }}){% endif %}
+				<form method="post" action="{% url 'tracker:transaction-delete' tr.id %}" class="inline" style="margin-left:8px">
+					{% csrf_token %}
+					<button class="btn" type="submit" onclick="return confirm('Hapus transaksi ini?')">Hapus</button>
+				</form>
+			</li>
+			{% empty %}
+			<li>Belum ada transaksi.</li>
+			{% endfor %}
+		</ul>
+	</div>
+
+	<div class="card">
+		<h2>Nabung</h2>
+		<form class="column" method="post" action="{% url 'tracker:saving-add' %}">
+			{% csrf_token %}
+			<div class="row">
+				<input type="date" name="date" value="{{ today }}" required>
+				<input type="number" step="0.01" name="amount" placeholder="Nominal" required>
+			</div>
+			<select name="goal_id">
+				<option value="">-- Pilih Tujuan (opsional) --</option>
+				{% for g in goals %}
+				<option value="{{ g.id }}">{{ g.name }} (target Rp {{ g.target_amount }})</option>
+				{% endfor %}
+			</select>
+			<input type="text" name="goal_name" placeholder="Nama tujuan (jika tidak pilih di atas)">
+			<input type="text" name="note" placeholder="Catatan (opsional)">
+			<button class="btn" type="submit">Tambah Tabungan</button>
+		</form>
+
+		<h3>Tujuan Tabungan</h3>
+		<ul class="list">
+			{% for g in goals %}
+			<li>
+				<strong>{{ g.name }}</strong>
+				<div class="progress"><span style="width: {{ g.progress_percent }}%"></span></div>
+				<span class="small">Rp {{ g.saved_amount }} / Rp {{ g.target_amount }}</span>
+			</li>
+			{% empty %}
+			<li>Belum ada tujuan tabungan.</li>
+			{% endfor %}
+		</ul>
+	</div>
+</div>
+
+<div class="grid">
+	<div class="card">
+		<h2>Log Pembelajaran</h2>
+		<form class="column" method="post" action="{% url 'tracker:learning-add' %}">
+			{% csrf_token %}
+			<input type="date" name="date" value="{{ today }}" required>
+			<input type="text" name="topic" placeholder="Topik yang Dipelajari" required>
+			<input type="number" name="duration" placeholder="Durasi Belajar (menit)">
+			<input type="url" name="source_url" placeholder="Link/Sumber Belajar (URL)">
+			<textarea name="key_takeaways" placeholder="Key Takeaways"></textarea>
+			<button class="btn primary" type="submit">Simpan Log</button>
+		</form>
+		<h3>Terbaru</h3>
+		<ul class="list small">
+			{% for l in learning_recent %}
+			<li>{{ l.date }} - {{ l.topic }} ({{ l.duration_minutes }}m)</li>
+			{% empty %}
+			<li>Belum ada log.</li>
+			{% endfor %}
+		</ul>
+	</div>
+
+	<div class="card">
+		<h2>Log Kesehatan</h2>
+		<form class="column" method="post" action="{% url 'tracker:health-add' %}">
+			{% csrf_token %}
+			<input type="date" name="date" value="{{ today }}" required>
+			<input type="text" name="activity" placeholder="Jenis Olahraga" required>
+			<input type="text" name="duration_or_sets" placeholder="Durasi/Set/Repetisi">
+			<input type="text" name="note" placeholder="Catatan">
+			<button class="btn primary" type="submit">Simpan Log</button>
+		</form>
+		<h3>Terbaru</h3>
+		<ul class="list small">
+			{% for h in health_recent %}
+			<li>{{ h.date }} - {{ h.activity }} {% if h.duration_or_sets %}({{ h.duration_or_sets }}){% endif %}</li>
+			{% empty %}
+			<li>Belum ada log.</li>
+			{% endfor %}
+		</ul>
+	</div>
+
+	<div class="card">
+		<h2>Jurnal Harian</h2>
+		<form class="column" method="post" action="{% url 'tracker:mindfulness-add' %}">
+			{% csrf_token %}
+			<input type="date" name="date" value="{{ today }}" required>
+			<textarea name="achievement" placeholder="Pencapaian terbaikmu hari ini?"></textarea>
+			<textarea name="challenge" placeholder="Tantangan yang dihadapi?"></textarea>
+			<textarea name="solution" placeholder="Bagaimana solusinya?"></textarea>
+			<textarea name="gratitude" placeholder="3 hal yang kamu syukuri"></textarea>
+			<button class="btn primary" type="submit">Simpan Jurnal</button>
+		</form>
+		<h3>Terbaru</h3>
+		<ul class="list small">
+			{% for m in mind_recent %}
+			<li>{{ m.date }} - {{ m.achievement|default:'(tanpa teks)' }}</li>
+			{% empty %}
+			<li>Belum ada jurnal.</li>
+			{% endfor %}
+		</ul>
+	</div>
+</div>
+
+<div class="card">
+	<h2>Grafik Progres Mingguan</h2>
+	<canvas id="weeklyChart" height="120"></canvas>
+</div>
+
+<p><a class="btn link" href="{% url 'tracker:reports' %}">Lihat Laporan & Analitik →</a></p>
+
+{% endblock %}
+{% block body_extra %}
+<script>
+const weekly = {{ weekly_counts|safe }};
+const labels = weekly.map(x => x.date.substring(5));
+const completed = weekly.map(x => x.completed);
+const total = weekly.map(x => x.total);
+new Chart(document.getElementById('weeklyChart'), {
+	type: 'bar',
+	data: { labels, datasets: [
+		{ label: 'Selesai', data: completed, backgroundColor: 'rgba(139,92,246,0.8)' },
+		{ label: 'Total', data: total, backgroundColor: 'rgba(236,72,153,0.45)' }
+	] },
+	options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %} 
