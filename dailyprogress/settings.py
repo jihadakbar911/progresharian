@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-)k5d5&o^qm(*eyky8tk=ot4i5^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
+ALLOWED_HOSTS = os.getenv('progresharian.up.railway.app/', 'localhost,127.0.0.1,0.0.0.0').split(',')
 CSRF_TRUSTED_ORIGINS = [
 	origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://*.up.railway.app').split(',') if origin.strip()
 ]
