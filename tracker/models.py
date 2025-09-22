@@ -154,6 +154,40 @@ class MindfulnessLog(models.Model):
 		return f"{self.date} - Mindfulness"
 
 
+class RecurrenceFrequency(models.TextChoices):
+    DAILY = 'DAILY', 'Harian'
+    WEEKLY = 'WEEKLY', 'Mingguan'
+    MONTHLY = 'MONTHLY', 'Bulanan'
+
+
+class RecurringTransaction(models.Model):
+    account = models.ForeignKey(Account, related_name='recurring_transactions', on_delete=models.CASCADE)
+    type = models.CharField(max_length=8, choices=TransactionType.choices)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    category = models.CharField(max_length=100, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    frequency = models.CharField(max_length=8, choices=RecurrenceFrequency.choices, default=RecurrenceFrequency.MONTHLY)
+    next_date = models.DateField(db_index=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.account.name} {self.type} {self.amount} ({self.frequency}) next {self.next_date}"
+
+
+class RecurringTask(models.Model):
+    category = models.CharField(max_length=16, choices=TaskCategory.choices)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    frequency = models.CharField(max_length=8, choices=RecurrenceFrequency.choices, default=RecurrenceFrequency.DAILY)
+    next_date = models.DateField(db_index=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.category}) {self.frequency} next {self.next_date}"
+
+
 class WaterIntake(models.Model):
 	date = models.DateField(db_index=True)
 	glasses = models.PositiveIntegerField(default=0)

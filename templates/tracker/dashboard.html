@@ -14,6 +14,10 @@
 			{% csrf_token %}
 			<button class="btn secondary" type="submit">Generate Saran AI</button>
 		</form>
+		<form method="post" action="{% url 'tracker:recurring-tasks-generate' %}" class="inline" style="margin-left:8px">
+			{% csrf_token %}
+			<button class="btn" type="submit">Generate Tugas Berulang</button>
+		</form>
 		<ul class="list">
 			<li>Akademik: {% if focus.academic %}{{ focus.academic.title }}{% else %}<em>Belum ditentukan</em>{% endif %}</li>
 			<li>Kesehatan: {% if focus.health %}{{ focus.health.title }}{% else %}<em>Belum ditentukan</em>{% endif %}</li>
@@ -25,6 +29,10 @@
 		<h2>Saldo</h2>
 		<p><strong>{{ account.name }}</strong></p>
 		<p class="big">Rp {{ current_balance }}</p>
+		<form method="post" action="{% url 'tracker:recurring-finance-generate' %}">
+			{% csrf_token %}
+			<button class="btn" type="submit">Generate Transaksi Berulang</button>
+		</form>
 	</div>
 
 	<div class="card">
@@ -39,6 +47,12 @@
 
 <div class="card">
 	<h2>Tugas Hari Ini</h2>
+	<details style="margin-bottom:8px">
+		<summary>Tambah Tugas Berulang</summary>
+		<form class="column" method="post" action="{% url 'tracker:recurring-tasks-generate' %}" onsubmit="return false" style="margin-top:6px">
+			<p class="small">Buat tugas berulang melalui admin dulu. Tombol "Generate Tugas Berulang" ada di atas.</p>
+		</form>
+	</details>
 	<form class="row" method="post" action="{% url 'tracker:task-add' %}">
 		{% csrf_token %}
 		<input type="date" name="date" value="{{ today }}" required>

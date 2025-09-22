@@ -3,17 +3,68 @@
 {% block content %}
 <h1>Saldo</h1>
 
+<form method="get" class="card row" style="gap:8px; align-items:flex-end">
+    <div class="column">
+        <label>Dari</label>
+        <input type="date" name="start" value="{{ filters.start }}">
+    </div>
+    <div class="column">
+        <label>Sampai</label>
+        <input type="date" name="end" value="{{ filters.end }}">
+    </div>
+    <div class="column">
+        <label>Jenis</label>
+        <select name="type">
+            <option value="">Semua</option>
+            <option value="INCOME" {% if filters.type == 'INCOME' %}selected{% endif %}>Pemasukan</option>
+            <option value="EXPENSE" {% if filters.type == 'EXPENSE' %}selected{% endif %}>Pengeluaran</option>
+        </select>
+    </div>
+    <div class="column" style="flex:1">
+        <label>Kata kunci</label>
+        <input type="text" name="q" placeholder="Cari kategori/catatan" value="{{ filters.q }}">
+    </div>
+    <div class="column">
+        <button class="btn" type="submit">Filter</button>
+        <a class="btn link" href="{% url 'tracker:saldo' %}">Reset</a>
+    </div>
+</form>
+
 <div class="grid">
     <div class="card">
         <h2>Ringkasan</h2>
+        <form method="get" class="row" style="gap:8px">
+            <select name="account_id">
+                {% for acc in accounts %}
+                <option value="{{ acc.id }}" {% if selected_account_id == acc.id|stringformat:'s' %}selected{% endif %}>{{ acc.name }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn" type="submit">Pilih</button>
+            <a class="btn link" href="{% url 'tracker:saldo' %}">Default</a>
+        </form>
         <p><strong>{{ account.name }}</strong></p>
         <p class="big">Rp {{ current_balance }}</p>
     </div>
 
     <div class="card">
         <h2>Catat Transaksi</h2>
+        <form method="post" action="{% url 'tracker:recurring-finance-generate' %}" class="inline" style="margin-bottom:8px">
+            {% csrf_token %}
+            <button class="btn" type="submit">Generate Transaksi Berulang</button>
+        </form>
+        <p class="small">Ekspor/Impor CSV:</p>
+        <div class="row" style="gap:8px; align-items:center">
+            <a class="btn" href="{% url 'tracker:transaction-export' %}?account_id={{ selected_account_id }}">Export CSV</a>
+            <form method="post" action="{% url 'tracker:transaction-import' %}" enctype="multipart/form-data" class="row" style="gap:8px">
+                {% csrf_token %}
+                <input type="hidden" name="account_id" value="{{ selected_account_id }}">
+                <input type="file" name="file" accept=".csv" required>
+                <button class="btn" type="submit">Import</button>
+            </form>
+        </div>
         <form class="column" method="post" action="{% url 'tracker:transaction-add' %}">
             {% csrf_token %}
+            <input type="hidden" name="account_id" value="{{ selected_account_id }}">
             <div class="row">
                 <input type="date" name="date" value="{{ today }}" required>
                 <select name="type" required>
@@ -37,6 +88,25 @@
                     {% csrf_token %}
                     <button class="btn" type="submit" onclick="return confirm('Hapus transaksi ini?')">Hapus</button>
                 </form>
+                <details style="margin-top:6px">
+                    <summary>Edit</summary>
+                    <form class="column" method="post" action="{% url 'tracker:transaction-edit' tr.id %}" style="margin-top:6px">
+                        {% csrf_token %}
+                        <div class="row">
+                            <input type="date" name="date" value="{{ tr.date|date:'Y-m-d' }}">
+                            <select name="type">
+                                <option value="INCOME" {% if tr.type == 'INCOME' %}selected{% endif %}>Pemasukan</option>
+                                <option value="EXPENSE" {% if tr.type == 'EXPENSE' %}selected{% endif %}>Pengeluaran</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <input type="number" step="0.01" name="amount" value="{{ tr.amount }}">
+                            <input type="text" name="category" value="{{ tr.category }}" placeholder="Kategori">
+                        </div>
+                        <input type="text" name="note" value="{{ tr.note }}" placeholder="Catatan">
+                        <button class="btn" type="submit">Simpan Perubahan</button>
+                    </form>
+                </details>
             </li>
             {% empty %}
             <li>Belum ada transaksi.</li>
@@ -46,8 +116,19 @@
 
     <div class="card">
         <h2>Nabung</h2>
+        <p class="small">Ekspor/Impor CSV:</p>
+        <div class="row" style="gap:8px; align-items:center">
+            <a class="btn" href="{% url 'tracker:saving-export' %}?account_id={{ selected_account_id }}">Export CSV</a>
+            <form method="post" action="{% url 'tracker:saving-import' %}" enctype="multipart/form-data" class="row" style="gap:8px">
+                {% csrf_token %}
+                <input type="hidden" name="account_id" value="{{ selected_account_id }}">
+                <input type="file" name="file" accept=".csv" required>
+                <button class="btn" type="submit">Import</button>
+            </form>
+        </div>
         <form class="column" method="post" action="{% url 'tracker:saving-add' %}">
             {% csrf_token %}
+            <input type="hidden" name="account_id" value="{{ selected_account_id }}">
             <div class="row">
                 <input type="date" name="date" value="{{ today }}" required>
                 <input type="number" step="0.01" name="amount" placeholder="Nominal" required>
@@ -75,6 +156,112 @@
             <li>Belum ada tujuan tabungan.</li>
             {% endfor %}
         </ul>
+        <h3>Tabungan Terakhir</h3>
+        <ul class="list small">
+            {% for sv in recent_savings %}
+            <li>
+                {{ sv.date }} - Rp {{ sv.amount }} {% if sv.goal %}({{ sv.goal.name }}){% elif sv.goal_name %}({{ sv.goal_name }}){% endif %}
+                <details style="margin-top:6px">
+                    <summary>Edit</summary>
+                    <form class="column" method="post" action="{% url 'tracker:saving-edit' sv.id %}" style="margin-top:6px">
+                        {% csrf_token %}
+                        <div class="row">
+                            <input type="date" name="date" value="{{ sv.date|date:'Y-m-d' }}">
+                            <input type="number" step="0.01" name="amount" value="{{ sv.amount }}">
+                        </div>
+                        <select name="goal_id">
+                            <option value="">-- Tanpa tujuan --</option>
+                            {% for g in goals %}
+                            <option value="{{ g.id }}" {% if sv.goal and sv.goal.id == g.id %}selected{% endif %}>{{ g.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="goal_name" value="{{ sv.goal_name }}" placeholder="Nama tujuan">
+                        <input type="text" name="note" value="{{ sv.note }}" placeholder="Catatan">
+                        <button class="btn" type="submit">Simpan Perubahan</button>
+                    </form>
+                </details>
+            </li>
+            {% empty %}
+            <li>Belum ada catatan tabungan.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Transaksi Berulang</h2>
+        <form class="column" method="post" action="{% url 'tracker:recurring-finance-create' %}" style="margin-bottom:12px">
+            {% csrf_token %}
+            <input type="hidden" name="account_id" value="{{ selected_account_id }}">
+            <div class="row">
+                <select name="type" required>
+                    <option value="INCOME">Pemasukan</option>
+                    <option value="EXPENSE">Pengeluaran</option>
+                </select>
+                <input type="number" step="0.01" name="amount" placeholder="Nominal" required>
+                <select name="frequency">
+                    <option value="DAILY">Harian</option>
+                    <option value="WEEKLY">Mingguan</option>
+                    <option value="MONTHLY" selected>Bulanan</option>
+                </select>
+            </div>
+            <div class="row">
+                <input type="date" name="next_date" value="{{ today }}" required>
+                <input type="text" name="category" placeholder="Kategori (opsional)">
+            </div>
+            <input type="text" name="note" placeholder="Catatan (opsional)">
+            <button class="btn" type="submit">Tambah Template</button>
+        </form>
+        <ul class="list small">
+            {% for rt in recurring_transactions %}
+            <li>
+                {{ rt.type }} - Rp {{ rt.amount }} • Next {{ rt.next_date }} • {{ rt.frequency }} {% if not rt.is_active %}<span class="badge">Nonaktif</span>{% endif %}
+                <details style="margin-top:6px">
+                    <summary>Edit</summary>
+                    <form class="column" method="post" action="{% url 'tracker:recurring-finance-edit' rt.id %}" style="margin-top:6px">
+                        {% csrf_token %}
+                        <div class="row">
+                            <select name="type">
+                                <option value="INCOME" {% if rt.type == 'INCOME' %}selected{% endif %}>Pemasukan</option>
+                                <option value="EXPENSE" {% if rt.type == 'EXPENSE' %}selected{% endif %}>Pengeluaran</option>
+                            </select>
+                            <input type="number" step="0.01" name="amount" value="{{ rt.amount }}">
+                            <select name="frequency">
+                                <option value="DAILY" {% if rt.frequency == 'DAILY' %}selected{% endif %}>Harian</option>
+                                <option value="WEEKLY" {% if rt.frequency == 'WEEKLY' %}selected{% endif %}>Mingguan</option>
+                                <option value="MONTHLY" {% if rt.frequency == 'MONTHLY' %}selected{% endif %}>Bulanan</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <input type="date" name="next_date" value="{{ rt.next_date|date:'Y-m-d' }}">
+                            <input type="text" name="category" value="{{ rt.category }}" placeholder="Kategori">
+                        </div>
+                        <input type="text" name="note" value="{{ rt.note }}" placeholder="Catatan">
+                        <label class="row" style="gap:6px; align-items:center"><input type="checkbox" name="is_active" {% if rt.is_active %}checked{% endif %}> Aktif</label>
+                        <div class="row" style="gap:8px">
+                            <button class="btn" type="submit">Simpan</button>
+                            <form method="post" action="{% url 'tracker:recurring-finance-delete' rt.id %}">
+                                {% csrf_token %}
+                                <button class="btn" type="submit" onclick="return confirm('Hapus template ini?')">Hapus</button>
+                            </form>
+                        </div>
+                    </form>
+                </details>
+            </li>
+            {% empty %}
+            <li>Belum ada transaksi berulang.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Buat Akun Baru</h2>
+        <form class="column" method="post" action="{% url 'tracker:account-create' %}">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Nama akun (mis. Dompet, Bank BCA)" required>
+            <input type="number" step="0.01" name="initial_balance" placeholder="Saldo awal" value="0">
+            <input type="text" name="description" placeholder="Deskripsi (opsional)">
+            <button class="btn" type="submit">Tambah Akun</button>
+        </form>
     </div>
 </div>
 
