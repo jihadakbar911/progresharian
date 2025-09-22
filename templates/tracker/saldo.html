@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Saldo · Progres Harian{% endblock %}
+{% block content %}
+<h1>Saldo</h1>
+
+<div class="grid">
+    <div class="card">
+        <h2>Ringkasan</h2>
+        <p><strong>{{ account.name }}</strong></p>
+        <p class="big">Rp {{ current_balance }}</p>
+    </div>
+
+    <div class="card">
+        <h2>Catat Transaksi</h2>
+        <form class="column" method="post" action="{% url 'tracker:transaction-add' %}">
+            {% csrf_token %}
+            <div class="row">
+                <input type="date" name="date" value="{{ today }}" required>
+                <select name="type" required>
+                    <option value="INCOME">Pemasukan</option>
+                    <option value="EXPENSE">Pengeluaran</option>
+                </select>
+            </div>
+            <div class="row">
+                <input type="number" step="0.01" name="amount" placeholder="Nominal" required>
+                <input type="text" name="category" placeholder="Kategori (opsional)">
+            </div>
+            <input type="text" name="note" placeholder="Catatan (opsional)">
+            <button class="btn primary" type="submit">Simpan</button>
+        </form>
+        <h3>Transaksi Terakhir</h3>
+        <ul class="list small">
+            {% for tr in recent_transactions %}
+            <li>
+                {{ tr.date }} - {{ tr.type }} - Rp {{ tr.amount }} {% if tr.category %}({{ tr.category }}){% endif %}
+                <form method="post" action="{% url 'tracker:transaction-delete' tr.id %}" class="inline" style="margin-left:8px">
+                    {% csrf_token %}
+                    <button class="btn" type="submit" onclick="return confirm('Hapus transaksi ini?')">Hapus</button>
+                </form>
+            </li>
+            {% empty %}
+            <li>Belum ada transaksi.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Nabung</h2>
+        <form class="column" method="post" action="{% url 'tracker:saving-add' %}">
+            {% csrf_token %}
+            <div class="row">
+                <input type="date" name="date" value="{{ today }}" required>
+                <input type="number" step="0.01" name="amount" placeholder="Nominal" required>
+            </div>
+            <select name="goal_id">
+                <option value="">-- Pilih Tujuan (opsional) --</option>
+                {% for g in goals %}
+                <option value="{{ g.id }}">{{ g.name }} (target Rp {{ g.target_amount }})</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="goal_name" placeholder="Nama tujuan (jika tidak pilih di atas)">
+            <input type="text" name="note" placeholder="Catatan (opsional)">
+            <button class="btn" type="submit">Tambah Tabungan</button>
+        </form>
+
+        <h3>Tujuan Tabungan</h3>
+        <ul class="list">
+            {% for g in goals %}
+            <li>
+                <strong>{{ g.name }}</strong>
+                <div class="progress"><span style="width: {{ g.progress_percent }}%"></span></div>
+                <span class="small">Rp {{ g.saved_amount }} / Rp {{ g.target_amount }}</span>
+            </li>
+            {% empty %}
+            <li>Belum ada tujuan tabungan.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% endblock %}
+

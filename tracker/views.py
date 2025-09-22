@@ -278,3 +278,21 @@ class ReportsView(View):
 			'health_count': health_count,
 		}
 		return render(request, 'tracker/reports.html', context)
+
+
+class SaldoView(View):
+    def get(self, request):
+        today = timezone.localdate()
+        account = _get_or_create_default_account()
+        recent_transactions = Transaction.objects.select_related('account').order_by('-date', '-id')[:20]
+        recent_savings = Saving.objects.select_related('account').order_by('-date', '-id')[:20]
+        goals = SavingsGoal.objects.all().order_by('-created_at')
+        context = {
+            'today': today,
+            'account': account,
+            'current_balance': account.current_balance,
+            'recent_transactions': recent_transactions,
+            'recent_savings': recent_savings,
+            'goals': goals,
+        }
+        return render(request, 'tracker/saldo.html', context)

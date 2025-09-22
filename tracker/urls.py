@@ -1,10 +1,11 @@
 from django.urls import path
-from .views import DashboardView, QuickAddTaskView, ToggleTaskDoneView, QuickAddTransactionView, QuickAddSavingView, WaterAddView, ReportsView, SuggestTasksAIView, AddLearningLogView, AddHealthLogView, AddMindfulnessLogView, DeleteTransactionView
+from .views import DashboardView, QuickAddTaskView, ToggleTaskDoneView, QuickAddTransactionView, QuickAddSavingView, WaterAddView, ReportsView, SuggestTasksAIView, AddLearningLogView, AddHealthLogView, AddMindfulnessLogView, DeleteTransactionView, SaldoView
 
 app_name = 'tracker'
 
 urlpatterns = [
 	path('', DashboardView.as_view(), name='dashboard'),
+    path('saldo', SaldoView.as_view(), name='saldo'),
 	path('tasks/add', QuickAddTaskView.as_view(), name='task-add'),
 	path('tasks/<int:task_id>/toggle', ToggleTaskDoneView.as_view(), name='task-toggle'),
 	path('tasks/suggest-ai', SuggestTasksAIView.as_view(), name='task-suggest-ai'),
